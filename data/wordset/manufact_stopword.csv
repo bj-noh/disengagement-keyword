@@ -1,0 +1,21 @@
+,stop_sentence
+0,The Safety Driver was able to safely take control of the vehicle.
+1,"As a result, Driver safely disengaged and resumed manual control."
+2,Precautionary Takeover
+3,System software failure in
+4,"Conditions: Non-inclement weather, dry roads, no other factors involved."
+5,Safety Driver disengaged autonomous mode
+6,Disengage for
+7,"The autonomous system perceives and understands the environment by processing raw camera and radar inputs, detecting surfaces and objects in a scene, and calculating distance, velocity and motion vector for every pixel."
+8,Ghost AV Test Drivers are trained to disengage proactively.
+9,The AV Test Driver took control of the vehicle in response to
+10,The AV Test Driver took control 
+11,"AV Test Drivers consider various factors, including the amount of traffic and the behavior of any surrounding vehicles."
+12,"In addition to their own perception, an in-vehicle display provides input on the vehicle's lane placement."
+13,Also incorporated is an advanced system for fluid exchange between the driver and the system without the need for buttons or switches
+14,This allows the AV Test Drivers to take control to provide a transitory adjustment
+15,Accelerator pedal pressed to increase velocity of the vehicle
+16,Brake pedal pressed to reduce the velocity of the vehicle
+17,The AV Safety Drivers are trained to take control proactively should the system not operate as expected
+18,"Weather(Sunny), Daylight:"
+19,The Safety Driver was able to safely take control of the vehicle

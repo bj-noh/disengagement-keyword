@@ -1,0 +1,7 @@
+Category,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+perception,perception,detection,localization,too close,curb,lane marking,distance,map,sensor,re-center,surrounding,mishandle,traffic light,stop line,discrepancy
+decision,motion plan,plan,trajectory,predict,router,yield,gap,improper,behavior,identify,initiate,,,,
+control,unwanted,unexpected,discomfort,too slow,overly,conservative,creeping,stuck,,,,,,,
+external,policy disengagement zone,intervention,ODD,debris,curvature,crash,construction,stranded,,,,,,,
+internal,hardware issue,software issue,hardware irregularity,system software failure,software discrepancy,hardware discrepancy,software component,software crash,sub-system,abnormal,,,,,
+human,as a precaution,safety decision,accidental takeover,safety critical,,,,,,,,,,,
