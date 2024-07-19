@@ -18,9 +18,11 @@ import importlib
 # my_module을 수정한 후 다시 로드
 import preprocess
 importlib.reload(preprocess)
-from preprocess import DataLoader
+from preprocess import DataPreLoader
+import ac_train
+importlib.reload(ac_train)
+from ac_train import AutoClassModel
 import visualization
-
 
 def argsparsing():
     # ArgumentParser 객체 생성
@@ -39,10 +41,13 @@ def argsparsing():
     parser.add_argument('--replacement', type=str, default='replacement.csv', help='Word replacement dicionary')
     parser.add_argument('--auto_labeling_model', type=str, default='bert', help='Type of topic model')    
     parser.add_argument('--topic_model', type=str, default='lda', help='Type of auto-labeling model')
-    parser.add_argument('--training', type=bool, default=True, help='Auto lageling mdoel training')
+    parser.add_argument('--preprocessing', action='store_false', help='Data preprocessing')
+    parser.add_argument('--training', type=bool, default=True, help='Auto labeling mddel training')
         
     args = parser.parse_args()
-    
+    return args
+
+def set_file_path(args):
     print("=============================================")
     DATA_PATH = args.data    
     print(f"DATA_PATH: {DATA_PATH}")
@@ -95,15 +100,36 @@ def argsparsing():
     
     print("=============================================\n")
     
+    
     return FINAL_DATASET_PATH, OUTPUT_PATH, MANUFACT_STOPWORD_FILE, REGULAR_STOPWORD_FILE, MULTI_WORDS_FILE, REPLACEMENT_FILE
     
-    
 def main():
-    FINAL_DATASET_PATH, OUTPUT_PATH, MANUFACT_STOPWORD_FILE, REGULAR_STOPWORD_FILE, MULTI_WORDS_FILE, REPLACEMENT_FILE = argsparsing()
-    daraloader = DataLoader(FINAL_DATASET_PATH, OUTPUT_PATH, MANUFACT_STOPWORD_FILE, REGULAR_STOPWORD_FILE, MULTI_WORDS_FILE, REPLACEMENT_FILE)
+    args = argsparsing()
+    print(args.preprocessing)
     
-    daraloader.load_data()
-    daraloader.preprocessing()
+    if args.preprocessing:
+
+        FINAL_DATASET_PATH, OUTPUT_PATH, MANUFACT_STOPWORD_FILE, REGULAR_STOPWORD_FILE, MULTI_WORDS_FILE, REPLACEMENT_FILE = set_file_path(args)
+        data_preloader = DataPreLoader(FINAL_DATASET_PATH, OUTPUT_PATH, MANUFACT_STOPWORD_FILE, REGULAR_STOPWORD_FILE, MULTI_WORDS_FILE, REPLACEMENT_FILE)
+    
+        data_preloader.load_data()
+        data_preloader.preprocessing(stopword_flag=True,
+                                     manufact_stopword_flag=True,
+                                     multi_words_flag=True,
+                                     replacement_flag=True, 
+                                     save_file=True)
+ 
+        data_preloader.data_sampling_for_expert_labeling()
+
+    if args.training:
+        a = './data/wordset/labels_by_domain_knowledge.csv'
+        b = './output/dmv-preprocessed.csv'
+        auto_classification_model = AutoClassModel(a, b, args.output)
+        auto_classification_model.DataLoader()
+        auto_classification_model.train()
+
+    else:
+        pass
     
     
 if __name__ == "__main__":

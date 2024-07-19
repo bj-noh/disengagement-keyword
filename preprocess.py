@@ -6,7 +6,7 @@ import nltk
 import os
 import chardet
 
-class DataLoader:
+class DataPreLoader:
     def __init__(self, FINAL_DATASET, OUTPUT_PATH, MANUFACT_STOPWORD, REGULAR_STOPWORD, MULTI_WORDS, REPLACEMENT):
         print("Init DataPreproc()...")
         
@@ -20,6 +20,9 @@ class DataLoader:
         self.multi_words_path = MULTI_WORDS
         self.replacement_dict_path = REPLACEMENT
         self.output_path = OUTPUT_PATH
+
+        nltk.download('stopwords')
+        self.general_stopwords = stopwords.words('english')
         
         # self.replacement_dict = self.load_replacement_dict()
         # self.multi_word_terms = [
@@ -79,15 +82,41 @@ class DataLoader:
         self.multi_words = pd.read_csv(self.multi_words_path, encoding='utf-8')
         
         self.replacement_dict_path = self.__convert_to_utf8(self.replacement_dict_path)        
-        self.replacement = pd.read_csv(self.replacement_dict_path, encoding='utf-8')
+        self.replacement_dict = pd.read_csv(self.replacement_dict_path, encoding='utf-8')
         
-        return self.data, self.stopword, self.manufact_stopword, self.multi_words, self.replacement
+        return self.data, self.stopword, self.manufact_stopword, self.multi_words, self.replacement_dict
     
+    def __remove_manufact_stopwords(self, text, stops):
+        for stop in stops:
+            text = text.replace(stop, '')        
+        return text
+
+    def __replace_multi_words(self, text, multi_word_terms):
+        for term in multi_word_terms:
+            text = text.replace(term, term.replace(' ', '_'))        
+        return text
+
+    def __remove_general_stopwords(self, text, additional_stopwords):
+        
+        final_stopwords = self.general_stopwords + additional_stopwords
+
+        words = word_tokenize(re.sub(r'[^a-zA-Z\s_]', ' ', text.lower()))
+        words = [word for word in words if word not in final_stopwords]
+        
+        return ' '.join(words)
+
+    def __replace_general_form(self, text, replacement_dict):
+        for other, key in replacement_dict.items():
+            text = re.sub(r'\b{}\b'.format(re.escape(other)), key, text)
+
+        return text
+
     def preprocessing(self, 
                       stopword_flag=True, 
                       manufact_stopword_flag=True, 
                       multi_words_flag=True, 
-                      replacement_flag = True):
+                      replacement_flag = True,
+                      save_file=True):
         """
         preprocessing method
         - data information extraction
@@ -131,11 +160,75 @@ class DataLoader:
         
         # Removel manufacturers' sentences in description columns (DESCRIPTION OF FACTS CAUSING DISENGAGEMENT)
         doc =  self.data['DESCRIPTION OF FACTS CAUSING DISENGAGEMENT']
-        print(doc)
-        # if manufact_stopword_flag:
+
+        # print("==================== origin descriptions ====================")
+        # print(doc)
+
+        if manufact_stopword_flag:
+            manufact_stopword = self.manufact_stopword['stop_sentence'].tolist()
+            doc = doc.apply(lambda x: self.__remove_manufact_stopwords(x, manufact_stopword))
+            # print("==================== manufact_stopwords removal ====================")
+            # print(doc)
+            self.data['PREP1_MANUFACT_STOPWORD_REMOVAL'] = doc
         
-        # if multi_words_flag:
+        if multi_words_flag:
+            multi_word_terms = self.multi_words['multi_words'].tolist()
+            doc = doc.apply(lambda x: self.__replace_multi_words(x, multi_word_terms))
+            # print("==================== multi_words replacement ====================")
+            # print(doc)
+            self.data['PREP2_MULTI_WORD_REPLACEMENT'] = doc
             
-        # if stopword_flag:
-            
-        # if replacement_flag:
+        if stopword_flag:
+            stop_words = self.stopword['additional_stop_words'].tolist()
+            doc = doc.apply(lambda x: self.__remove_general_stopwords(x, stop_words))
+            # print("==================== general stopwords removal ====================")
+            # print(doc)
+            self.data['PREP3_GENERAL_STOPWORD_REMOVAL'] = doc
+    
+        if replacement_flag:
+            replacements = {}
+            for _, row in self.replacement_dict.iterrows():
+                key_expression = row['key expression']
+                for col in self.replacement_dict.columns:
+                    if col != 'key expression' and pd.notna(row[col]):
+                        replacements[row[col]] = key_expression
+
+            doc = doc.apply(lambda x: self.__replace_general_form(x, replacements))
+            # print("==================== general form replacement ====================")
+            # print(doc)
+            self.data['PREP4_TERM_FORM_REPLACEMENT'] = doc
+
+        self.data['preprocessed'] = doc
+
+        # save files
+        directory, filename = os.path.split(self.data_path)        
+        name, ext = os.path.splitext(filename)
+        new_filename = f"{name}-preprocessed{ext}"
+        output_path = os.path.join(self.output_path, new_filename)
+        self.data.to_csv(output_path)
+        print(f"Preprocssed file is saved in {output_path}")
+
+        new_filename = f"{name}-preprocessed_final{ext}"
+        output_path = os.path.join(self.output_path, new_filename)
+        self.data[['Manufacturer', 'year', 'preprocessed']].to_csv(output_path)
+        print(f"Preprocssed file is saved (for analysis) in {output_path}")
+
+    def data_sampling_for_expert_labeling(self):
+        manu_list = list(set(self.data['Manufacturer']))        
+        sampled_df = pd.DataFrame(self.data[self.data['Manufacturer'] == manu_list[0]].sample(20))
+        sampled_df['Label'] = ''
+
+        for i, manu in enumerate(manu_list):
+            if i > 0:
+                if len(self.data[self.data['Manufacturer'] == manu]) < 20:
+                    sampled_df = pd.concat([sampled_df, self.data[self.data['Manufacturer'] == manu]], axis=0)                    
+                else:
+                    sampled_df = pd.concat([sampled_df, self.data[self.data['Manufacturer'] == manu].sample(20)], axis=0)
+
+        # save file
+        directory, filename = os.path.split(self.data_path)        
+        name, ext = os.path.splitext(filename)
+        new_filename = f"{name}-for_domain_knowledge{ext}"
+        output_path = os.path.join(self.output_path, new_filename)
+        sampled_df[['Manufacturer', 'year', 'DESCRIPTION OF FACTS CAUSING DISENGAGEMENT', 'Label']].to_csv(output_path)
+        print(f"Preprocssed file is saved in {output_path}")
